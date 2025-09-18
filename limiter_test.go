@@ -27,8 +27,7 @@ func TestUnit_Limiter(t *testing.T) {
 			case <-ctx.Done():
 				return
 			default:
-				if err := lim.Tap(context.Background()); err != nil {
-					casecheck.ErrorContains(t, err, "context canceled")
+				if !lim.Tap(context.Background()) {
 					return
 				}
 				atomic.AddInt64(&counter, 1)

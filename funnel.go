@@ -73,7 +73,9 @@ func (l *funnel[T]) Valve(name T, call func()) {
 
 	if nl.Count() <= 0 {
 		l.global.Lock()
-		delete(l.locks, name)
+		if nl.Count() <= 0 {
+			delete(l.locks, name)
+		}
 		l.global.Unlock()
 	}
 }

@@ -7,7 +7,6 @@ package syncing
 
 import (
 	"context"
-	"fmt"
 	"time"
 )
 
@@ -20,7 +19,7 @@ type (
 	}
 
 	Limiter interface {
-		Tap(ctx context.Context) error
+		Tap(ctx context.Context) bool
 	}
 )
 
@@ -55,14 +54,14 @@ func NewLimiter(ctx context.Context, count int, interval time.Duration) Limiter 
 	return rl
 }
 
-func (l *limiter) Tap(ctx context.Context) error {
+func (l *limiter) Tap(ctx context.Context) bool {
 	select {
 	case <-l.ch:
-		return nil
+		return true
 	case <-l.ctx.Done():
-		return fmt.Errorf("context canceled")
+		return false
 	case <-ctx.Done():
-		return fmt.Errorf("context canceled")
+		return false
 	}
 }
 

@@ -23,11 +23,42 @@ func NewLock() Lock {
 
 func (v *_lock) Lock(call func()) {
 	v.mux.Lock()
+	defer v.mux.Unlock()
+
 	call()
-	v.mux.Unlock()
 }
 func (v *_lock) RLock(call func()) {
 	v.mux.RLock()
+	defer v.mux.RUnlock()
+
 	call()
-	v.mux.RUnlock()
+}
+
+//------------------------------------------------------------------
+
+type (
+	XLock[V any] interface {
+		RLock(call func() (V, error)) (V, error)
+		Lock(call func() (V, error)) (V, error)
+	}
+	_xlock[V any] struct {
+		mux s.RWMutex
+	}
+)
+
+func NewXLock[V any]() XLock[V] {
+	return &_xlock[V]{}
+}
+
+func (v *_xlock[V]) Lock(call func() (V, error)) (V, error) {
+	v.mux.Lock()
+	defer v.mux.Unlock()
+
+	return call()
+}
+func (v *_xlock[V]) RLock(call func() (V, error)) (V, error) {
+	v.mux.RLock()
+	defer v.mux.RUnlock()
+
+	return call()
 }

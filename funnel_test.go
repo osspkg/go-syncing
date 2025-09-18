@@ -27,13 +27,11 @@ func TestUnit_Funnel(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		close(startCh)
-
 		ml.Valve("a", func() {
+			close(startCh)
 			result.Append("a1")
+			time.Sleep(100 * time.Millisecond)
 		})
-
-		time.Sleep(100 * time.Millisecond)
 	}()
 
 	<-startCh
@@ -44,8 +42,6 @@ func TestUnit_Funnel(t *testing.T) {
 		ml.Valve("a", func() {
 			result.Append("a2")
 		})
-
-		time.Sleep(100 * time.Millisecond)
 	}()
 
 	go func() {
@@ -54,8 +50,6 @@ func TestUnit_Funnel(t *testing.T) {
 		ml.Valve("b", func() {
 			result.Append("b1")
 		})
-
-		time.Sleep(100 * time.Millisecond)
 	}()
 
 	wg.Wait()
@@ -63,14 +57,22 @@ func TestUnit_Funnel(t *testing.T) {
 	casecheck.Equal(t, []string{"a1", "b1", "a2"}, result.Extract())
 }
 
+/*
+goos: linux
+goarch: amd64
+pkg: go.osspkg.com/syncing
+cpu: 12th Gen Intel(R) Core(TM) i9-12900KF
+BenchmarkFunnel
+BenchmarkFunnel-24    	 5078994	       224.5 ns/op	      19 B/op	       0 allocs/op
+*/
 func BenchmarkFunnel(b *testing.B) {
+	b.ReportAllocs()
 	f := NewFunnel[string]()
 
+	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			f.Valve("", func() {
-
-			})
+			f.Valve("", func() {})
 		}
 	})
 }
