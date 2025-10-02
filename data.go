@@ -19,6 +19,13 @@ func NewMap[K comparable, V any](size uint) *Map[K, V] {
 	}
 }
 
+func (v *Map[K, V]) Size() int {
+	v.mux.RLock()
+	defer v.mux.RUnlock()
+
+	return len(v.data)
+}
+
 func (v *Map[K, V]) Set(key K, val V) {
 	v.mux.Lock()
 	defer v.mux.Unlock()
@@ -77,14 +84,21 @@ func (v *Map[K, V]) Reset() {
 
 type Slice[V any] struct {
 	data []V
-	mux  sync.Mutex
+	mux  sync.RWMutex
 }
 
 func NewSlice[V any](size uint) *Slice[V] {
 	return &Slice[V]{
 		data: make([]V, 0, size),
-		mux:  sync.Mutex{},
+		mux:  sync.RWMutex{},
 	}
+}
+
+func (v *Slice[V]) Size() int {
+	v.mux.RLock()
+	defer v.mux.RUnlock()
+
+	return len(v.data)
 }
 
 func (v *Slice[V]) Append(val ...V) {

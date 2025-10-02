@@ -25,8 +25,7 @@ type (
 		mux       sync.RWMutex
 		globalCtx context.Context
 		cancelCtx context.CancelFunc
-
-		onPanic func(err error)
+		onPanic   func(err error)
 	}
 )
 
@@ -51,29 +50,20 @@ func (v *_group) Wait() {
 
 func (v *_group) Cancel() {
 	v.cancelCtx()
+	v.wg.Wait()
 }
 
 func (v *_group) Background(name string, call func(ctx context.Context)) {
 	v.wg.Add(1)
-
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				v.mux.RLock()
-				if v.onPanic != nil {
-					v.onPanic(fmt.Errorf("%s: %v", name, err))
-				}
-				v.mux.RUnlock()
-			}
-			v.wg.Done()
-		}()
-
-		call(v.globalCtx)
-	}()
+	go v.launch(name, call)
 }
 
 func (v *_group) Run(name string, call func(ctx context.Context)) {
 	v.wg.Add(1)
+	v.launch(name, call)
+}
+
+func (v *_group) launch(name string, call func(ctx context.Context)) {
 	defer func() {
 		if err := recover(); err != nil {
 			v.mux.RLock()

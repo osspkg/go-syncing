@@ -28,14 +28,14 @@ func NewLimiter(ctx context.Context, count int, interval time.Duration) Limiter 
 		count = 1
 	}
 
-	rl := &limiter{
+	lim := &limiter{
 		count: count,
 		pause: interval / time.Duration(count),
 		ch:    make(chan struct{}, count),
 		ctx:   ctx,
 	}
 
-	go rl.refill()
+	go lim.refill()
 	go func() {
 		tik := time.NewTicker(interval)
 		defer tik.Stop()
@@ -46,12 +46,12 @@ func NewLimiter(ctx context.Context, count int, interval time.Duration) Limiter 
 				return
 
 			case <-tik.C:
-				rl.refill()
+				lim.refill()
 			}
 		}
 	}()
 
-	return rl
+	return lim
 }
 
 func (l *limiter) Tap(ctx context.Context) bool {
