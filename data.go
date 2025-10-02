@@ -5,7 +5,10 @@
 
 package syncing
 
-import "sync"
+import (
+	"iter"
+	"sync"
+)
 
 type Map[K comparable, V any] struct {
 	data map[K]V
@@ -77,7 +80,19 @@ func (v *Map[K, V]) Reset() {
 	for key := range v.data {
 		delete(v.data, key)
 	}
-	return
+}
+
+func (v *Map[K, V]) Yield() iter.Seq2[K, V] {
+	keys := v.Keys()
+	return func(yield func(K, V) bool) {
+		for _, key := range keys {
+			if val, ok := v.Get(key); ok {
+				if !yield(key, val) {
+					return
+				}
+			}
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -101,6 +116,13 @@ func (v *Slice[V]) Size() int {
 	return len(v.data)
 }
 
+func (v *Slice[V]) Reset() {
+	v.mux.Lock()
+	defer v.mux.Unlock()
+
+	v.data = v.data[:0]
+}
+
 func (v *Slice[V]) Append(val ...V) {
 	v.mux.Lock()
 	defer v.mux.Unlock()
@@ -116,4 +138,29 @@ func (v *Slice[V]) Extract() []V {
 	copy(tmp[:], v.data[:])
 	v.data = v.data[:0]
 	return tmp
+}
+
+func (v *Slice[V]) Index(i int) (V, bool) {
+	v.mux.RLock()
+	defer v.mux.RUnlock()
+
+	if i >= len(v.data) {
+		var empty V
+		return empty, false
+	}
+
+	return v.data[i], true
+}
+
+func (v *Slice[V]) Yield() iter.Seq[V] {
+	var i int
+	return func(yield func(V) bool) {
+		for {
+			if val, ok := v.Index(i); ok {
+				if !yield(val) {
+					return
+				}
+			}
+		}
+	}
 }
