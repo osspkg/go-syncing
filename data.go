@@ -153,9 +153,9 @@ func (v *Slice[V]) Index(i int) (V, bool) {
 }
 
 func (v *Slice[V]) Yield() iter.Seq[V] {
-	var i int
+	length := len(v.data)
 	return func(yield func(V) bool) {
-		for {
+		for i := 0; i < length; i++ {
 			if val, ok := v.Index(i); ok {
 				if !yield(val) {
 					return
