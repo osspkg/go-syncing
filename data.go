@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2024-2025 Mikhail Knyazhev <markus621@yandex.ru>. All rights reserved.
+ *  Copyright (c) 2024-2026 Mikhail Knyazhev <markus621@yandex.com>. All rights reserved.
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
@@ -140,6 +140,32 @@ func (v *Slice[V]) Extract() []V {
 	return tmp
 }
 
+func (v *Slice[V]) All() []V {
+	v.mux.RLock()
+	defer v.mux.RUnlock()
+
+	tmp := make([]V, len(v.data))
+	copy(tmp[:], v.data[:])
+	return tmp
+}
+
+func (v *Slice[V]) Splice(start, deleteCount int, elements ...V) {
+	v.mux.Lock()
+	defer v.mux.Unlock()
+
+	lastPos := len(v.data)
+	start = minMax(start, 0, lastPos)
+	deleteCount = minMax(deleteCount, 0, lastPos)
+	deletePos := minMax(deleteCount+start, 0, lastPos)
+
+	v.data = append(v.data[:start], v.data[deletePos:]...)
+	lastPos = len(v.data)
+
+	v.data = append(v.data, elements...)
+	copy(v.data[start+len(elements):], v.data[start:lastPos])
+	copy(v.data[start:], elements[:])
+}
+
 func (v *Slice[V]) Index(i int) (V, bool) {
 	v.mux.RLock()
 	defer v.mux.RUnlock()
@@ -150,6 +176,21 @@ func (v *Slice[V]) Index(i int) (V, bool) {
 	}
 
 	return v.data[i], true
+}
+
+func (v *Slice[V]) Set(i int, val V) {
+	v.mux.Lock()
+	defer v.mux.Unlock()
+
+	if i < 0 {
+		return
+	}
+
+	if i >= len(v.data) {
+		v.data = append(v.data, make([]V, max(0, i-(len(v.data)-1)))...)
+	}
+
+	v.data[i] = val
 }
 
 func (v *Slice[V]) Yield() iter.Seq[V] {
