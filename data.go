@@ -130,6 +130,28 @@ func (v *Slice[V]) Append(val ...V) {
 	v.data = append(v.data, val...)
 }
 
+func (v *Slice[V]) Push(val V) {
+	v.mux.Lock()
+	defer v.mux.Unlock()
+
+	v.data = append(v.data, val)
+}
+
+func (v *Slice[V]) Pop() (el V, ok bool) {
+	v.mux.Lock()
+	defer v.mux.Unlock()
+
+	n := len(v.data)
+	if n == 0 {
+		return
+	}
+
+	el = v.data[n-1]
+	v.data = v.data[:n-1]
+
+	return
+}
+
 func (v *Slice[V]) Extract() []V {
 	v.mux.Lock()
 	defer v.mux.Unlock()

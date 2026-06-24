@@ -24,9 +24,7 @@ type (
 )
 
 func NewLimiter(ctx context.Context, count int, interval time.Duration) Limiter {
-	if count <= 0 {
-		count = 1
-	}
+	count = max(count, 1)
 
 	lim := &limiter{
 		count: count,

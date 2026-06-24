@@ -13,8 +13,10 @@ import (
 
 type (
 	Group interface {
-		Cancel()
+		Add(delta int)
+		Done()
 		Wait()
+		Cancel()
 		Background(name string, call func(ctx context.Context))
 		Run(name string, call func(ctx context.Context))
 		OnPanic(call func(err error))
@@ -35,6 +37,14 @@ func NewGroup(ctx context.Context) Group {
 		globalCtx: ctx,
 		cancelCtx: cancel,
 	}
+}
+
+func (v *_group) Add(delta int) {
+	v.wg.Add(delta)
+}
+
+func (v *_group) Done() {
+	v.wg.Done()
 }
 
 func (v *_group) OnPanic(call func(err error)) {
@@ -67,11 +77,13 @@ func (v *_group) launch(name string, call func(ctx context.Context)) {
 	defer func() {
 		if err := recover(); err != nil {
 			v.mux.RLock()
+			defer v.mux.RUnlock()
+
 			if v.onPanic != nil {
 				v.onPanic(fmt.Errorf("%s: %v", name, err))
 			}
-			v.mux.RUnlock()
 		}
+
 		v.wg.Done()
 	}()
 
